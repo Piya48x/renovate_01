@@ -166,23 +166,27 @@ app.post('/api/booking-notify', async (req, res) => {
 
     const allResults = [...lineResults, ...fbResults];
     const failed = allResults.filter((item) => !item.ok);
-    if (failed.length) {
-      return res.status(502).json({
-        ok: false,
-        error: 'notify-failed',
-        failed,
+    const lineSuccess = lineResults.filter((item) => item.ok).length;
+    const facebookSuccess = fbResults.filter((item) => item.ok).length;
+
+    // Business rule: if LINE is delivered, treat request as success.
+    if (lineSuccess > 0) {
+      return res.status(200).json({
+        ok: true,
+        lineDelivered: true,
+        facebookDelivered: failed.length ? facebookSuccess > 0 : true,
         sent: allResults.length - failed.length,
-        total: allResults.length
+        total: allResults.length,
+        failed
       });
     }
 
-    return res.status(200).json({
-      ok: true,
-      sent: allResults.length,
-      channels: {
-        line: lineResults.length,
-        facebook: fbResults.length
-      }
+    return res.status(502).json({
+      ok: false,
+      error: 'line-delivery-required',
+      failed,
+      sent: allResults.length - failed.length,
+      total: allResults.length
     });
   } catch (error) {
     return res.status(500).json({

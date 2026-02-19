@@ -98,14 +98,14 @@ So no extra change is needed when serving this site from the same server.
 
 Success:
 
-- `200` with `{ ok: true }`
+- `200` when LINE delivery succeeds (Facebook may still fail; details returned in `failed`)
 
 Failure:
 
 - `400` invalid JSON body
 - `415` unsupported content type (must be `application/json`)
 - `500` missing config
-- `502` channel delivery failed (LINE or Facebook)
+- `502` when LINE delivery fails
 
 This behavior is intentional so frontend fallback can trigger.
 
