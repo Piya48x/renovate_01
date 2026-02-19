@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: renovate-booking-notify
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      - key: LINE_TO_IDS
+        sync: false
+      - key: FB_PAGE_ACCESS_TOKEN
+        sync: false
+      - key: FB_RECIPIENT_PSIDS
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
