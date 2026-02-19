@@ -460,10 +460,10 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
             <a href="tel:0917240308"><i class="fa-solid fa-phone"></i> โทร: 091-724-0308</a>
             <a class="btn-line" href="https://line.me/ti/p/~0917240308" target="_blank" rel="noopener"><i class="fa-brands fa-line"></i> ทัก LINE ขอประเมินฟรี (ID: 0917240308)</a>
             <a class="btn-line" href="https://line.me/ti/p/~0917240308" target="_blank" rel="noopener"><i class="fa-solid fa-image"></i> ส่งรูปหน้างานเพื่อประเมินเร็ว</a>
-            <a class="btn-map" href="https://maps.google.com/?q=Bangkok" target="_blank" rel="noopener"><i class="fa-solid fa-map-location-dot"></i> เปิดแผนที่ Google Maps</a>
+            <a class="btn-map" href="https://www.google.com/maps/place/%E0%B8%9B%E0%B8%97%E0%B8%B8%E0%B8%A1%E0%B8%98%E0%B8%B2%E0%B8%99%E0%B8%B5/@14.0952062,99.9822679,9z/data=!3m1!4b1!4m6!3m5!1s0x311d808aa9fb8e47:0x1019237450c4850!8m2!3d14.0033913!4d100.6647101!16zL20vMDFfdzF2?entry=ttu&g_ep=EgoyMDI2MDIxNi4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener"><i class="fa-solid fa-map-location-dot"></i> เปิดแผนที่ Google Maps</a>
             <a class="btn-fb" href="https://facebook.com" target="_blank" rel="noopener"><i class="fa-brands fa-facebook"></i> Facebook Page</a>
           </div>
-          <div class="map-box"><iframe loading="lazy" allowfullscreen src="https://www.google.com/maps?q=Bangkok&output=embed"></iframe></div>
+          <div class="map-box"><iframe loading="lazy" allowfullscreen src="https://www.google.com/maps?q=14.0033913,100.6647101&output=embed"></iframe></div>
         </div>
 
         <div class="contact-card reveal" data-anim="right">
@@ -769,6 +769,8 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
         }
         const message = [
           'แจ้งเตือนนัดหมายใหม่ (เว็บไซต์)',
+          'สถานะ: รอติดต่อกลับ',
+          'คำขอ: กรุณาให้ทีมงานติดต่อกลับลูกค้าเพื่อยืนยันคิว',
           `ผู้ติดต่อ: ${name}`,
           `เบอร์โทร: ${phone}`,
           `บริการ: ${service}`,
@@ -787,6 +789,7 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
           time,
           area,
           note: note || '',
+          request_callback: true,
           raw_message: message
         };
         setSubmitting(true);
@@ -794,7 +797,7 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
           if (bookingNotifyWebhook) {
             const sent = await postToWebhook(payload);
             if (sent) {
-              alert('รับคำขอนัดหมายแล้ว\nระบบแจ้งเตือนไป LINE เรียบร้อย');
+              alert('รับคำขอนัดหมายแล้ว\nระบบส่งแจ้งเตือนให้ทีมงานใน LINE แล้ว และทีมงานจะติดต่อกลับ');
               bookingForm.reset();
               return;
             }
@@ -997,10 +1000,40 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
       });
       const carouselStage = portfolioTrack.closest('.carousel-stage');
       if (carouselStage) {
+        let touchStartX = 0;
+        let touchDeltaX = 0;
+        let swiping = false;
+        const swipeThreshold = 42;
         carouselStage.addEventListener('mouseenter', stopAutoSlide);
         carouselStage.addEventListener('mouseleave', startAutoSlide);
-        carouselStage.addEventListener('touchstart', stopAutoSlide, { passive: true });
-        carouselStage.addEventListener('touchend', startAutoSlide, { passive: true });
+        carouselStage.addEventListener('touchstart', e => {
+          if (!e.touches?.length) return;
+          swiping = true;
+          touchStartX = e.touches[0].clientX;
+          touchDeltaX = 0;
+          stopAutoSlide();
+        }, { passive: true });
+        carouselStage.addEventListener('touchmove', e => {
+          if (!swiping || !e.touches?.length) return;
+          touchDeltaX = e.touches[0].clientX - touchStartX;
+        }, { passive: true });
+        carouselStage.addEventListener('touchend', () => {
+          if (!swiping) {
+            startAutoSlide();
+            return;
+          }
+          if (Math.abs(touchDeltaX) >= swipeThreshold) {
+            goToSlide(currentSlide + (touchDeltaX < 0 ? 1 : -1));
+          }
+          swiping = false;
+          touchDeltaX = 0;
+          startAutoSlide();
+        }, { passive: true });
+        carouselStage.addEventListener('touchcancel', () => {
+          swiping = false;
+          touchDeltaX = 0;
+          startAutoSlide();
+        }, { passive: true });
       }
       goToSlide(0);
       startAutoSlide();

@@ -57,6 +57,8 @@ const buildBookingMessage = (body) => {
   if (body.raw_message) return String(body.raw_message).trim();
   const lines = [
     'แจ้งเตือนนัดหมายใหม่ (เว็บไซต์)',
+    'สถานะ: รอติดต่อกลับ',
+    'คำขอ: กรุณาให้ทีมงานติดต่อกลับลูกค้าเพื่อยืนยันคิว',
     `ผู้ติดต่อ: ${body.name || '-'}`,
     `เบอร์โทร: ${body.phone || '-'}`,
     `บริการ: ${body.service || '-'}`,
