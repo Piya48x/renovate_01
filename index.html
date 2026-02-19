@@ -470,10 +470,15 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
           <h3 style="color:var(--primary); margin-bottom:8px;">ส่งข้อมูลให้ทีมงานติดต่อกลับ</h3>
           <p style="color:var(--muted); margin-bottom:14px;">สำหรับประเมินราคาเบื้องต้นและนัดหมายเข้าตรวจหน้างาน (รับงานกรุงเทพและปริมณฑล)</p>
           <div class="contact-form-layout">
-            <form class="form-grid" action="javascript:void(0);" onsubmit="alert('ขอบคุณสำหรับข้อมูล ทีมงานหนุนนำรับซ่อมบ้านจะติดต่อกลับโดยเร็วที่สุด');">
-              <input class="input" type="text" placeholder="ชื่อ-นามสกุล" required>
-              <input class="input" type="tel" placeholder="เบอร์โทรศัพท์" required>
-              <select class="input" required>
+            <form
+              id="contactLeadForm"
+              class="form-grid"
+              data-line-target="https://line.me/ti/p/~0917240308"
+              data-webhook-url="/api/booking-notify"
+            >
+              <input class="input" id="contactName" type="text" placeholder="ชื่อ-นามสกุล" required>
+              <input class="input" id="contactPhone" type="tel" placeholder="เบอร์โทรศัพท์" required>
+              <select class="input" id="contactService" required>
                 <option value="">เลือกประเภทบริการ</option>
                 <option>งานหลังคา</option>
                 <option>งานฝ้าเพดาน</option>
@@ -482,8 +487,9 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
                 <option>งานก่อสร้างและพื้น</option>
                 <option>งานกระเบื้อง</option>
               </select>
-              <textarea class="input" placeholder="รายละเอียดงาน / พื้นที่โดยประมาณ"></textarea>
-              <button class="btn btn-primary" type="submit">ส่งข้อมูลประเมินฟรี</button>
+              <textarea class="input" id="contactNote" placeholder="รายละเอียดงาน / พื้นที่โดยประมาณ"></textarea>
+              <button class="btn btn-primary" id="contactSubmitBtn" type="submit">ส่งข้อมูลประเมินฟรี</button>
+              <p id="contactHelp" style="font-size:.9rem;color:#4b5563;">* ระบบจะส่งแจ้งเตือนให้ทีมงานติดต่อกลับทาง LINE ทันที</p>
             </form>
             <aside class="contact-qr-card" aria-label="สแกน QR เพื่อติดต่อทันที">
               <p class="qr-kicker"><i class="fa-solid fa-qrcode"></i> ติดต่อด่วนผ่าน QR</p>
@@ -812,6 +818,108 @@ h1,h2,h3,.hero-badge{font-family:'Chakra Petch','Prompt',sans-serif}
           bookingForm.reset();
         } finally {
           setSubmitting(false);
+        }
+      });
+    }
+
+    const contactLeadForm = document.getElementById('contactLeadForm');
+    if (contactLeadForm) {
+      const contactNotifyWebhook = contactLeadForm.dataset.webhookUrl?.trim() || '';
+      const contactLineTarget = contactLeadForm.dataset.lineTarget?.trim() || 'https://line.me/ti/p/~0917240308';
+      const contactSubmitBtn = document.getElementById('contactSubmitBtn');
+      const contactHelp = document.getElementById('contactHelp');
+      const setContactSubmitting = (isSubmitting) => {
+        if (contactSubmitBtn) {
+          contactSubmitBtn.disabled = isSubmitting;
+          contactSubmitBtn.style.opacity = isSubmitting ? '.75' : '1';
+          contactSubmitBtn.style.cursor = isSubmitting ? 'wait' : '';
+        }
+        if (contactHelp) {
+          contactHelp.textContent = isSubmitting
+            ? 'กำลังส่งข้อมูลให้ทีมงาน...'
+            : '* ระบบจะส่งแจ้งเตือนให้ทีมงานติดต่อกลับทาง LINE ทันที';
+        }
+      };
+      const openContactLine = () => {
+        const lineWindow = window.open(contactLineTarget, '_blank', 'noopener');
+        if (!lineWindow) window.location.href = contactLineTarget;
+      };
+      const copyContactToClipboard = async (text) => {
+        if (!navigator.clipboard?.writeText) return false;
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const postContactWebhook = async (payload) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        try {
+          const response = await fetch(contactNotifyWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          return response.ok;
+        } catch {
+          return false;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      };
+      contactLeadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('contactName')?.value?.trim();
+        const phone = document.getElementById('contactPhone')?.value?.trim();
+        const service = document.getElementById('contactService')?.value?.trim();
+        const note = document.getElementById('contactNote')?.value?.trim();
+        if (!name || !phone || !service) {
+          alert('กรุณากรอกชื่อ เบอร์โทร และประเภทบริการให้ครบถ้วน');
+          return;
+        }
+        const message = [
+          'แจ้งเตือนลูกค้าใหม่ (ฟอร์มติดต่อกลับ)',
+          'สถานะ: รอติดต่อกลับ',
+          'คำขอ: กรุณาให้ทีมงานติดต่อกลับลูกค้า',
+          `ผู้ติดต่อ: ${name}`,
+          `เบอร์โทร: ${phone}`,
+          `บริการที่สนใจ: ${service}`,
+          `รายละเอียด: ${note || '-'}`,
+          `เวลาที่ส่ง: ${new Date().toLocaleString('th-TH')}`
+        ].join('\n');
+        const payload = {
+          source: 'website-contact-lead',
+          created_at: new Date().toISOString(),
+          name,
+          phone,
+          service,
+          note: note || '',
+          request_callback: true,
+          raw_message: message
+        };
+        setContactSubmitting(true);
+        try {
+          if (contactNotifyWebhook) {
+            const sent = await postContactWebhook(payload);
+            if (sent) {
+              alert('รับข้อมูลเรียบร้อย\nระบบส่งแจ้งเตือนให้ทีมงานแล้ว และทีมงานจะติดต่อกลับ');
+              contactLeadForm.reset();
+              return;
+            }
+          }
+          const copied = await copyContactToClipboard(message);
+          openContactLine();
+          if (copied) {
+            alert('บันทึกข้อมูลแล้ว\nคัดลอกข้อความเรียบร้อย และเปิด LINE ให้แล้ว กรุณาวางข้อความแล้วส่ง');
+          } else {
+            alert(`บันทึกข้อมูลแล้ว\nกรุณาส่งข้อความนี้ใน LINE:\n\n${message}`);
+          }
+          contactLeadForm.reset();
+        } finally {
+          setContactSubmitting(false);
         }
       });
     }
